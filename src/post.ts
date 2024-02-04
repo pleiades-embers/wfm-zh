@@ -3,7 +3,7 @@ export async function post(url = "", data = {}) {
   var config = {
     method: "post",
     url: url,
-    data: JSON.stringify(data),
+    data: data,
   };
   return axios(config);
 }

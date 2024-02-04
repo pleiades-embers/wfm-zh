@@ -1,61 +1,115 @@
-import { useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import "./App.css";
-import { Table } from "@arco-design/web-react";
+import { Table, Select, Spin } from "@arco-design/web-react";
 import { columns } from "./options";
 import { post } from "./post";
-
-const data = [
-  {
-    key: "1",
-    name: "Jane Doe",
-    salary: 23000,
-    address: "32 Park Road, London",
-    email: "jane.doe@example.com",
-  },
-  {
-    key: "2",
-    name: "Alisa Ross",
-    salary: 25000,
-    address: "35 Park Road, Paris",
-    email: "alisa.ross@example.com",
-  },
-  {
-    key: "3",
-    name: "Kevin Sandra",
-    salary: 22000,
-    address: "31 Park Road, London",
-    email: "kevin.sandra@example.com",
-  },
-  {
-    key: "4",
-    name: "Ed Hellen",
-    salary: 17000,
-    address: "42 Park Road, Paris",
-    email: "ed.hellen@example.com",
-  },
-  {
-    key: "5",
-    name: "William Smith",
-    salary: 27000,
-    address: "62 Park Road, London",
-    email: "william.smith@example.com",
-  },
-];
-
+import debounce from 'lodash/debounce';
+import TagList from "./TagList";
 const App = () => {
-  // const [data,setData]=useState([])
+  const [searchHistory, setSearchHistory] = useState<Record<number,string>[]>([])
+  const [commodities,setCommodities]=useState([])
+  const [tableData,setTableData]=useState<any>([])
+  const [tableLoading,setTableLoading]=useState<boolean>(false)
+  const [fetching, setFetching] = useState(false);
+  const refFetchId = useRef<any>(null);
 
-  useEffect(() => {
-    post("/api/SearchCommodity", {
-      "app_id": "warframe_market",
-      "from_src": "warframe_market_web",
-      "word": "一举三"
-  }).then((data) => {
-      console.log(data); 
+
+  function postCommodityTableData(id:number) {
+    setTableLoading(true)
+    const params = {
+      app_id: "warframe_market",
+      from_src: "warframe_market_web",
+      page_size: 2,
+      sorts: [
+        {
+          "key": "online_state",
+          "order": "desc"
+        }
+      ],
+      filters: [
+        {
+          "key": "content.commodity_id",
+          "operator": "=",
+          "value": id
+        },
+        {
+          "key": "content.type",
+          "operator": "=",
+          "value": 1
+        }
+      ]
+    }
+    post("/api/SearchPost", params).then(function (res: any) {
+      console.log(res,111)
+      if(res?.data?.posts?.length>0){
+        setTableData(res.data.posts)
+        setTableLoading(false)
+      }
     });
-  }, []);
 
-  return <Table columns={columns} data={data} />;
+  }
+
+  function onSearchSelect(value:{value:number,label:string}){
+    const newValue={id:value.value,name:value.label}
+    setSearchHistory([newValue,...searchHistory])
+    postCommodityTableData(newValue.id)
+  }
+
+
+  const debouncedFetchUser = useCallback(
+    debounce((inputValue) => {
+      refFetchId.current = Date.now();
+      const fetchId = refFetchId.current;
+      setFetching(true);
+      post("/api/SearchCommodity", {
+        app_id: "warframe_market",
+        from_src: "warframe_market_web",
+        word: inputValue,
+      }).then(function (response: any) {
+        if (refFetchId.current === fetchId) {
+          const options = response.data.commodities.map((item: any) => ({
+            label: item.name,
+            value: item.commodity_id,
+          }));
+          setFetching(false);
+          setCommodities(options);
+        }
+
+      });
+    }, 100),
+    []
+  );
+
+  return (
+    <>
+      <Select
+        style={{ width: 800, marginBottom: 20 }}
+        showSearch
+        options={commodities}
+        placeholder="请输入名称搜索"
+        filterOption={false}
+        onChange={onSearchSelect}
+        labelInValue={true}
+        notFoundContent={
+          fetching ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Spin style={{ margin: 12 }} />
+            </div>
+          ) : null
+        }
+        onSearch={debouncedFetchUser}
+      />
+      <br/>
+      <TagList data={searchHistory}   />
+      <Table columns={columns} data={tableData} loading={tableLoading} />
+    </>
+  );
 };
 
 export default App;
