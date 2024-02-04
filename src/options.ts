@@ -20,6 +20,15 @@ export const columns:any = [
     {
       title: '单价',
       dataIndex: 'content.price',
+      sorter: (a: { content: { price: number; }; }, b: { content: { price: number; }; }) => {
+        if (a.content.price > b.content.price) {
+          return 1;
+        }
+        if (a.content.price < b.content.price) {
+          return -1;
+        }
+        return 0;
+      },
     },
     {
       title: '数量',

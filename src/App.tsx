@@ -19,7 +19,7 @@ const App = () => {
     const params = {
       app_id: "warframe_market",
       from_src: "warframe_market_web",
-      page_size: 2,
+      page_size: 10,
       sorts: [
         {
           "key": "online_state",
