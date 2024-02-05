@@ -4,7 +4,9 @@ function TagList(props:any) {
   const { data } = props;
 
   function onTagClick(){}
-  function removeTag(item){}
+  function removeTag(id:number){
+    console.log(id)
+  }
 
   return (
     <div style={{marginBottom:20}} className="tagList-wrap">
